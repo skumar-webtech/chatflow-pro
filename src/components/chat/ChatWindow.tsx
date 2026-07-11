@@ -29,6 +29,8 @@ export function ChatWindow({
   typingUser,
   onSend,
   onTyping,
+  onEdit,
+  onDelete,
   onOpenSidebar,
   onlineCount,
 }: ChatWindowProps) {

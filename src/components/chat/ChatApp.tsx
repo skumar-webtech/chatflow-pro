@@ -26,6 +26,7 @@ export function ChatApp() {
         typingUser={chat.typingUser}
         onSend={chat.send}
         onTyping={chat.notifyTyping}
+        onTypingStop={chat.stopTyping}
         onEdit={chat.editMessage}
         onDelete={chat.deleteMessage}
         onOpenSidebar={() => setSidebarOpen(true)}

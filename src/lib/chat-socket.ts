@@ -1,217 +1,85 @@
-// Thin wrapper around socket.io-client with a built-in mock fallback so the
-// UI is fully functional without a backend. Set VITE_API_BASE_URL to point
-// at a real socket.io server; otherwise the mock takes over.
-
 import { io, type Socket } from "socket.io-client";
 
-export type ChatMessage = {
-  id: string;
-  username: string;
-  text: string;
-  createdAt: number;
-  editedAt?: number;
-  deleted?: boolean;
-};
+import { getApiUrl } from "@/services/api";
 
-export type ChatUser = {
-  username: string;
-  online: boolean;
-};
+export type { ChatMessage, ChatUser } from "@/services/api";
 
 export interface ChatSocket {
   connected: boolean;
   connect: (username: string) => void;
   disconnect: () => void;
-  send: (msg: { id: string; text: string }) => void;
-  edit: (id: string, text: string) => void;
-  remove: (id: string) => void;
-  typing: () => void;
+  sendMessage: (msg: { content: string; clientId: string }) => void;
+  startTyping: () => void;
+  stopTyping: () => void;
   on: <T = unknown>(event: string, cb: (payload: T) => void) => () => void;
 }
 
-const API = (import.meta as ImportMeta & { env: Record<string, string | undefined> })
-  .env.VITE_API_BASE_URL;
+let singleton: Socket | null = null;
+let activeUsername: string | null = null;
 
-/* ---------- Mock implementation ---------- */
+function ensureSocket() {
+  if (!singleton) {
+    singleton = io(getApiUrl(), {
+      autoConnect: false,
+      transports: ["websocket"],
+    });
 
-type Listener = (payload: unknown) => void;
+    singleton.on("connect", () => {
+      if (activeUsername) {
+        singleton?.emit("user:join", { username: activeUsername });
+      }
+    });
+  }
 
-const BOTS = ["Ava", "Kai", "Noor", "Milo"];
-const BOT_LINES = [
-  "hey 👋",
-  "did you see the new design?",
-  "lol 😂",
-  "brb, grabbing coffee",
-  "sounds good to me",
-  "anyone up for lunch?",
-  "just pushed the fix",
-  "typing tests are wild",
-  "🔥🔥🔥",
-  "let me know when you're free",
-];
-
-function makeMockSocket(): ChatSocket {
-  const listeners = new Map<string, Set<Listener>>();
-  let me = "";
-  let connected = false;
-  const users = new Map<string, ChatUser>();
-  BOTS.forEach((u) => users.set(u, { username: u, online: true }));
-
-  const emit = (event: string, payload: unknown) => {
-    listeners.get(event)?.forEach((cb) => cb(payload));
-  };
-
-  let botTimer: ReturnType<typeof setInterval> | null = null;
-  let typingTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const scheduleBotChatter = () => {
-    if (botTimer) clearInterval(botTimer);
-    botTimer = setInterval(() => {
-      const bot = BOTS[Math.floor(Math.random() * BOTS.length)];
-      // Typing indicator first
-      emit("typing", { username: bot });
-      if (typingTimer) clearTimeout(typingTimer);
-      typingTimer = setTimeout(
-        () => {
-          const msg: ChatMessage = {
-            id: crypto.randomUUID(),
-            username: bot,
-            text: BOT_LINES[Math.floor(Math.random() * BOT_LINES.length)],
-            createdAt: Date.now(),
-          };
-          emit("message", msg);
-        },
-        1200 + Math.random() * 1500,
-      );
-    }, 9000);
-  };
-
-  return {
-    get connected() {
-      return connected;
-    },
-    connect(username) {
-      me = username;
-      connected = true;
-      users.set(username, { username, online: true });
-      setTimeout(() => {
-        emit("connect", null);
-        emit("users", Array.from(users.values()));
-        emit("message", {
-          id: crypto.randomUUID(),
-          username: "Ava",
-          text: `Welcome, ${username}! 🎉`,
-          createdAt: Date.now(),
-        } satisfies ChatMessage);
-      }, 300);
-      scheduleBotChatter();
-    },
-    disconnect() {
-      connected = false;
-      if (botTimer) clearInterval(botTimer);
-      if (typingTimer) clearTimeout(typingTimer);
-      users.delete(me);
-      emit("disconnect", null);
-    },
-    send({ id, text }) {
-      const msg: ChatMessage = {
-        id,
-        username: me,
-        text,
-        createdAt: Date.now(),
-      };
-      // Echo back after the network "hop" — same id dedupes optimistic entry
-      setTimeout(() => emit("message", msg), 60);
-    },
-    edit(id, text) {
-      setTimeout(
-        () => emit("message:update", { id, text, editedAt: Date.now() }),
-        60,
-      );
-    },
-    remove(id) {
-      setTimeout(() => emit("message:delete", { id }), 60);
-    },
-    typing() {
-      // no-op for self in mock
-    },
-    on(event, cb) {
-      const set = listeners.get(event) ?? new Set();
-      set.add(cb as Listener);
-      listeners.set(event, set);
-      return () => set.delete(cb as Listener);
-    },
-  };
-}
-
-/* ---------- Real socket.io wrapper ---------- */
-
-function makeRealSocket(url: string): ChatSocket {
-  let socket: Socket | null = null;
-  return {
-    get connected() {
-      return socket?.connected ?? false;
-    },
-    connect(username) {
-      socket = io(url, { auth: { username }, transports: ["websocket"] });
-    },
-    disconnect() {
-      socket?.disconnect();
-      socket = null;
-    },
-    send({ id, text }) {
-      socket?.emit("message", { id, text });
-    },
-    edit(id, text) {
-      socket?.emit("message:update", { id, text });
-    },
-    remove(id) {
-      socket?.emit("message:delete", { id });
-    },
-    typing() {
-      socket?.emit("typing");
-    },
-    on(event, cb) {
-      socket?.on(event, cb as (...args: unknown[]) => void);
-      return () => socket?.off(event, cb as (...args: unknown[]) => void);
-    },
-  };
-}
-
-let singleton: ChatSocket | null = null;
-export function getChatSocket(): ChatSocket {
-  if (singleton) return singleton;
-  singleton = API ? makeRealSocket(API) : makeMockSocket();
   return singleton;
 }
 
-export const IS_MOCK = !API;
+function makeSocket(): ChatSocket {
+  return {
+    get connected() {
+      return singleton?.connected ?? false;
+    },
+    connect(username) {
+      activeUsername = username;
+      const client = ensureSocket();
+      if (!client.connected) {
+        client.connect();
+      }
+    },
+    disconnect() {
+      singleton?.removeAllListeners();
+      singleton?.disconnect();
+      singleton = null;
+      activeUsername = null;
+    },
+    sendMessage({ content, clientId }) {
+      ensureSocket().emit("message:send", { content, clientId });
+    },
+    startTyping() {
+      ensureSocket().emit("typing:start");
+    },
+    stopTyping() {
+      ensureSocket().emit("typing:stop");
+    },
+    on(event, cb) {
+      const client = ensureSocket();
+      client.on(event, cb as (...args: unknown[]) => void);
+      return () => client.off(event, cb as (...args: unknown[]) => void);
+    },
+  };
+}
 
-/* ---------- Message history (mock GET /api/messages) ---------- */
+let chatSocket: ChatSocket | null = null;
 
-export async function fetchMessageHistory(): Promise<ChatMessage[]> {
-  if (API) {
-    const res = await fetch(`${API}/api/messages`);
-    if (!res.ok) throw new Error("Failed to fetch messages");
-    return res.json();
+export function getChatSocket(): ChatSocket {
+  if (!chatSocket) {
+    chatSocket = makeSocket();
   }
-  // Seed history
-  const now = Date.now();
-  return [
-    { id: "h1", username: "Ava", text: "morning team ☀️", createdAt: now - 1000 * 60 * 32 },
-    { id: "h2", username: "Kai", text: "morning!", createdAt: now - 1000 * 60 * 31 },
-    {
-      id: "h3",
-      username: "Noor",
-      text: "shipping the redesign today, wish me luck",
-      createdAt: now - 1000 * 60 * 22,
-    },
-    { id: "h4", username: "Milo", text: "you got this 💪", createdAt: now - 1000 * 60 * 20 },
-    {
-      id: "h5",
-      username: "Ava",
-      text: "let me know if you want another pass on the copy",
-      createdAt: now - 1000 * 60 * 12,
-    },
-  ];
+
+  return chatSocket;
+}
+
+export function resetChatSocket() {
+  chatSocket?.disconnect();
+  chatSocket = null;
 }

@@ -1,13 +1,15 @@
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Send } from "lucide-react";
 
 export function MessageInput({
   onSend,
   onTyping,
+  onTypingStop,
   disabled,
 }: {
   onSend: (text: string) => void;
   onTyping: () => void;
+  onTypingStop: () => void;
   disabled?: boolean;
 }) {
   const [value, setValue] = useState("");
@@ -17,6 +19,7 @@ export function MessageInput({
   const submit = () => {
     if (!value.trim()) return;
     onSend(value);
+    onTypingStop();
     setValue("");
   };
 
@@ -29,8 +32,16 @@ export function MessageInput({
     if (typingTimer.current) clearTimeout(typingTimer.current);
     typingTimer.current = setTimeout(() => {
       lastTypingSent.current = 0;
+      onTypingStop();
     }, 2000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+      onTypingStop();
+    };
+  }, [onTypingStop]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

@@ -15,6 +15,7 @@ interface ChatWindowProps {
   typingUser: string | null;
   onSend: (text: string) => void;
   onTyping: () => void;
+  onTypingStop: () => void;
   onEdit: (id: string, text: string) => void;
   onDelete: (id: string) => void;
   onOpenSidebar: () => void;
@@ -29,6 +30,7 @@ export function ChatWindow({
   typingUser,
   onSend,
   onTyping,
+  onTypingStop,
   onEdit,
   onDelete,
   onOpenSidebar,
@@ -135,7 +137,12 @@ export function ChatWindow({
         <div className="px-3 sm:px-6">
           <TypingIndicator username={typingUser} />
         </div>
-        <MessageInput onSend={onSend} onTyping={onTyping} disabled={!connected} />
+        <MessageInput
+          onSend={onSend}
+          onTyping={onTyping}
+          onTypingStop={onTypingStop}
+          disabled={!connected}
+        />
       </div>
     </section>
   );

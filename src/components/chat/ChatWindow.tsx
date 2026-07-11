@@ -109,7 +109,13 @@ export function ChatWindow({
                     <span className="h-px flex-1 bg-border" />
                   </div>
                 )}
-                <MessageBubble message={m} isMe={m.username === me} showMeta={changeAuthor} />
+                <MessageBubble
+                  message={m}
+                  isMe={m.username === me}
+                  showMeta={changeAuthor}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
               </div>
             );
           })}

@@ -15,6 +15,8 @@ interface ChatWindowProps {
   typingUser: string | null;
   onSend: (text: string) => void;
   onTyping: () => void;
+  onEdit: (id: string, text: string) => void;
+  onDelete: (id: string) => void;
   onOpenSidebar: () => void;
   onlineCount: number;
 }

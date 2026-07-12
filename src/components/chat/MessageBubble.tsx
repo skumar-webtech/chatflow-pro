@@ -67,10 +67,10 @@ export function MessageBubble({
 
         <div className={`flex items-center gap-1.5 ${isMe ? "flex-row-reverse" : ""}`}>
           <div
-            className={`relative rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+            className={`relative rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-lg backdrop-blur-md transition ${
               isMe
-                ? "bg-gradient-primary text-primary-foreground rounded-br-md"
-                : "bg-card text-card-foreground border border-border rounded-bl-md"
+                ? "bg-gradient-primary text-primary-foreground rounded-br-md ring-1 ring-white/20"
+                : "bg-white/25 text-foreground border border-white/30 rounded-bl-md dark:bg-white/10 dark:border-white/15"
             }`}
           >
             {editing ? (

@@ -22,7 +22,7 @@ export function Sidebar({ me, users, open, onClose }: SidebarProps) {
         onClick={onClose}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-80 max-w-[85vw] flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-transform md:static md:z-auto md:w-72 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-80 max-w-[85vw] flex-col border-r border-white/15 bg-white/15 text-foreground backdrop-blur-2xl backdrop-saturate-150 transition-transform dark:bg-white/5 md:static md:z-auto md:w-72 md:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

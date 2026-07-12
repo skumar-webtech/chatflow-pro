@@ -38,7 +38,7 @@ export function LoginScreen({ showWarmupMessage = false, warmupFailed = false }:
         playsInline
         preload="metadata"
       >
-        <source src="/assets/bg.mp4" type="video/mp4" />
+        <source src="/src/assets/bg.mp4" type="video/mp4" />
       </video>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950/50 via-indigo-950/40 to-purple-950/50" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,var(--accent-glow),transparent_55%),radial-gradient(circle_at_80%_90%,var(--primary-glow),transparent_50%)] opacity-60" />
